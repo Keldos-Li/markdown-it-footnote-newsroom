@@ -1,10 +1,13 @@
-# markdown-it-footnote
+# markdown-it-footnote-newsroom
 
 [![CI](https://github.com/markdown-it/markdown-it-footnote/actions/workflows/ci.yml/badge.svg)](https://github.com/markdown-it/markdown-it-footnote/actions/workflows/ci.yml)
 [![NPM version](https://img.shields.io/npm/v/markdown-it-footnote.svg?style=flat)](https://www.npmjs.org/package/markdown-it-footnote)
 [![Coverage Status](https://img.shields.io/coveralls/markdown-it/markdown-it-footnote/master.svg?style=flat)](https://coveralls.io/r/markdown-it/markdown-it-footnote?branch=master)
 
 > Footnotes plugin for [markdown-it](https://github.com/markdown-it/markdown-it) markdown parser.
+
+
+fixed for hexo-theme-applenewsroom
 
 __v2.+ requires `markdown-it` v5.+, see changelog.__
 

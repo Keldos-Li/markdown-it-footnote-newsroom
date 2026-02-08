@@ -2,6 +2,8 @@
 //
 'use strict'
 
+// Keldos fix for nexo-theme-applenewsroom
+
 /// /////////////////////////////////////////////////////////////////////////////
 // Renderer partials
 
@@ -15,11 +17,9 @@ function render_footnote_anchor_name (tokens, idx, options, env/*, slf */) {
 }
 
 function render_footnote_caption (tokens, idx/*, options, env, slf */) {
-  let n = Number(tokens[idx].meta.id + 1).toString()
-
-  if (tokens[idx].meta.subId > 0) n += `:${tokens[idx].meta.subId}`
-
-  return `[${n}]`
+  // 只显示数字，不附加 :subId
+  const n = Number(tokens[idx].meta.id + 1).toString()
+  return n
 }
 
 function render_footnote_ref (tokens, idx, options, env, slf) {
@@ -33,13 +33,17 @@ function render_footnote_ref (tokens, idx, options, env, slf) {
 }
 
 function render_footnote_block_open (tokens, idx, options) {
-  return (options.xhtmlOut ? '<hr class="footnotes-sep" />\n' : '<hr class="footnotes-sep">\n') +
-         '<section class="footnotes">\n' +
+  // return (options.xhtmlOut ? '<hr class="footnotes-sep" />\n' : '<hr class="footnotes-sep">\n') +
+  //        '<section class="footnotes">\n' +
+  //        '<ol class="footnotes-list">\n'
+  return '<div class="sosumi footnotes component text"><div class="component-content">\n' +
+         '<p></p>\n' +
          '<ol class="footnotes-list">\n'
 }
 
 function render_footnote_block_close () {
-  return '</ol>\n</section>\n'
+  // return '</ol>\n</section>\n'
+  return '</ol>\n</div></div>\n'
 }
 
 function render_footnote_open (tokens, idx, options, env, slf) {
@@ -346,8 +350,116 @@ export default function footnote_plugin (md) {
     state.tokens.push(new state.Token('footnote_block_close', '', -1))
   }
 
+  // 处理脚注周围的文本，用 span 包裹防止断行
+  function footnote_wrap_context (state) {
+    // 只匹配结束性标点（后引号、句号等），不包括前引号
+    const punctuationRe = /^[，、。！？；：」》”’）】〕…·—～,.!?;:]/
+
+    for (let i = 0; i < state.tokens.length; i++) {
+      const token = state.tokens[i]
+      if (token.type !== 'inline' || !token.children) continue
+
+      const children = token.children
+      const newChildren = []
+
+      for (let j = 0; j < children.length; j++) {
+        if (children[j].type === 'footnote_ref') {
+          let startIdx = newChildren.length
+          let hasWrapped = false
+
+          // 向前找：获取前一个词（西文）或字符（中文）
+          if (startIdx > 0 && newChildren[startIdx - 1].type === 'text') {
+            const prevText = newChildren[startIdx - 1].content
+            // 匹配最后一个西文单词或最后一个非空白字符
+            const match = prevText.match(/([a-zA-Z0-9]+|\S)(\s*)$/)
+
+            if (match) {
+              const word = match[1]
+              const spaces = match[2]
+              const beforeWord = prevText.slice(0, -(word.length + spaces.length))
+
+              // 分割文本
+              if (beforeWord) {
+                newChildren[startIdx - 1].content = beforeWord
+              } else {
+                newChildren.pop()
+                startIdx--
+              }
+
+              // 插入开始标签
+              const openToken = new state.Token('html_inline', '', 0)
+              openToken.content = '<span class="nowrap">'
+              newChildren.push(openToken)
+
+              // 插入词
+              const wordToken = new state.Token('text', '', 0)
+              wordToken.content = word + spaces
+              newChildren.push(wordToken)
+
+              hasWrapped = true
+            }
+          }
+
+          // 如果没有前置词，至少包裹 sup 本身
+          if (!hasWrapped) {
+            const openToken = new state.Token('html_inline', '', 0)
+            openToken.content = '<span class="nowrap">'
+            newChildren.push(openToken)
+          }
+
+          // 添加脚注本身
+          newChildren.push(children[j])
+
+          // 向后找：获取后续标点
+          let foundPunct = false
+          if (j + 1 < children.length && children[j + 1].type === 'text') {
+            const nextText = children[j + 1].content
+            const match = nextText.match(punctuationRe)
+
+            if (match) {
+              const punct = match[0]
+              const afterPunct = nextText.slice(punct.length)
+
+              // 添加标点
+              const punctToken = new state.Token('text', '', 0)
+              punctToken.content = punct
+              newChildren.push(punctToken)
+
+              // 关闭 span
+              const closeToken = new state.Token('html_inline', '', 0)
+              closeToken.content = '</span>'
+              newChildren.push(closeToken)
+
+              // 如果标点后还有文本，添加它
+              if (afterPunct) {
+                const afterToken = new state.Token('text', '', 0)
+                afterToken.content = afterPunct
+                newChildren.push(afterToken)
+              }
+
+              j++ // 跳过已处理的下一个 token
+              foundPunct = true
+            }
+          }
+
+          // 如果没有找到标点，只关闭 span
+          if (!foundPunct) {
+            const closeToken = new state.Token('html_inline', '', 0)
+            closeToken.content = '</span>'
+            newChildren.push(closeToken)
+          }
+        } else {
+          newChildren.push(children[j])
+        }
+      }
+
+      token.children = newChildren
+    }
+  }
+
   md.block.ruler.before('reference', 'footnote_def', footnote_def, { alt: ['paragraph', 'reference'] })
   md.inline.ruler.after('image', 'footnote_inline', footnote_inline)
   md.inline.ruler.after('footnote_inline', 'footnote_ref', footnote_ref)
   md.core.ruler.after('inline', 'footnote_tail', footnote_tail)
+  md.core.ruler.after('footnote_tail', 'footnote_wrap_context', footnote_wrap_context)
 };

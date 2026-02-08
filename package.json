@@ -1,6 +1,6 @@
 {
-  "name": "markdown-it-footnote",
-  "version": "4.0.0",
+  "name": "markdown-it-footnote-newsroom",
+  "version": "4.0.1",
   "description": "Footnotes for markdown-it markdown parser.",
   "keywords": [
     "markdown-it-plugin",
@@ -8,7 +8,7 @@
     "markdown",
     "footnotes"
   ],
-  "repository": "markdown-it/markdown-it-footnote",
+  "repository": "Keldos-Li/markdown-it-footnote-newsroom",
   "license": "MIT",
   "main": "dist/index.cjs.js",
   "module": "index.mjs",
