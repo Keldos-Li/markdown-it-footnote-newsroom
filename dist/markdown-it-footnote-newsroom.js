@@ -1,4 +1,4 @@
-/*! markdown-it-footnote-newsroom 4.0.2 https://github.com/Keldos-Li/markdown-it-footnote-newsroom @license MIT */
+/*! markdown-it-footnote-newsroom 4.0.3 https://github.com/Keldos-Li/markdown-it-footnote-newsroom @license MIT */
 (function(global, factory) {
   typeof exports === "object" && typeof module !== "undefined" ? module.exports = factory() : typeof define === "function" && define.amd ? define(factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, 
   global.markdownitFootnoteNewsroom = factory());
@@ -310,7 +310,7 @@
                         if (startIdx > 0) {
               // 收集前面所有相邻的文本token的内容和位置
               let fullText = "";
-              let textTokenIndices = [];
+              const textTokenIndices = [];
               for (let k = startIdx - 1; k >= 0 && newChildren[k].type === "text"; k--) {
                 textTokenIndices.unshift(k);
                 fullText = newChildren[k].content + fullText;
@@ -324,7 +324,7 @@
                 // 再跳过空白（标点之前可能有空白）
                                 while (i2 > 0 && /\s/.test(fullText[i2 - 1])) i2--;
                 // 查找西文单词或汉字
-                                let searchText = fullText.slice(0, i2);
+                                const searchText = fullText.slice(0, i2);
                 let wordMatch = searchText.match(/[a-zA-Z0-9]+$/);
                 let wrapCharPos = -1;
                 if (wordMatch) {
@@ -338,7 +338,7 @@
                 if (wrapCharPos !== -1) {
                   // 找到需要包裹的起点，计算它在哪个token中
                   let currentPos = 0;
-                  for (let k of textTokenIndices) {
+                  for (const k of textTokenIndices) {
                     const tokenLen = newChildren[k].content.length;
                     if (wrapCharPos >= currentPos && wrapCharPos < currentPos + tokenLen) {
                       const charInToken = wrapCharPos - currentPos;

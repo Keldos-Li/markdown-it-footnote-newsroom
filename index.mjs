@@ -371,8 +371,8 @@ export default function footnote_plugin (md) {
           if (startIdx > 0) {
             // 收集前面所有相邻的文本token的内容和位置
             let fullText = ''
-            let textTokenIndices = []
-            
+            const textTokenIndices = []
+
             for (let k = startIdx - 1; k >= 0 && newChildren[k].type === 'text'; k--) {
               textTokenIndices.unshift(k)
               fullText = newChildren[k].content + fullText
@@ -391,7 +391,7 @@ export default function footnote_plugin (md) {
               while (i2 > 0 && /\s/.test(fullText[i2 - 1])) i2--
 
               // 查找西文单词或汉字
-              let searchText = fullText.slice(0, i2)
+              const searchText = fullText.slice(0, i2)
               let wordMatch = searchText.match(/[a-zA-Z0-9]+$/)
               let wrapCharPos = -1
 
@@ -407,11 +407,11 @@ export default function footnote_plugin (md) {
               if (wrapCharPos !== -1) {
                 // 找到需要包裹的起点，计算它在哪个token中
                 let currentPos = 0
-                for (let k of textTokenIndices) {
+                for (const k of textTokenIndices) {
                   const tokenLen = newChildren[k].content.length
                   if (wrapCharPos >= currentPos && wrapCharPos < currentPos + tokenLen) {
                     const charInToken = wrapCharPos - currentPos
-                    
+
                     // 分割token
                     const beforeContent = newChildren[k].content.slice(0, charInToken)
                     const wrapContent = newChildren[k].content.slice(charInToken)
