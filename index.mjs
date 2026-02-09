@@ -367,36 +367,96 @@ export default function footnote_plugin (md) {
           let startIdx = newChildren.length
           let hasWrapped = false
 
-          // 向前找：获取前一个词（西文）或字符（中文）
-          if (startIdx > 0 && newChildren[startIdx - 1].type === 'text') {
-            const prevText = newChildren[startIdx - 1].content
-            // 匹配最后一个西文单词或最后一个非空白字符
-            const match = prevText.match(/([a-zA-Z0-9]+|\S)(\s*)$/)
+          // 向前找：获取前一个词（西文）或字符（中文），跳过标点直到找到词
+          if (startIdx > 0) {
+            // 收集前面所有相邻的文本token的内容和位置
+            let fullText = ''
+            let textTokenIndices = []
+            
+            for (let k = startIdx - 1; k >= 0 && newChildren[k].type === 'text'; k--) {
+              textTokenIndices.unshift(k)
+              fullText = newChildren[k].content + fullText
+            }
 
-            if (match) {
-              const word = match[1]
-              const spaces = match[2]
-              const beforeWord = prevText.slice(0, -(word.length + spaces.length))
+            if (textTokenIndices.length > 0) {
+              let i2 = fullText.length
 
-              // 分割文本
-              if (beforeWord) {
-                newChildren[startIdx - 1].content = beforeWord
+              // 跳过尾部空白
+              while (i2 > 0 && /\s/.test(fullText[i2 - 1])) i2--
+
+              // 跳过标点
+              while (i2 > 0 && punctuationRe.test(fullText[i2 - 1])) i2--
+
+              // 再跳过空白（标点之前可能有空白）
+              while (i2 > 0 && /\s/.test(fullText[i2 - 1])) i2--
+
+              // 查找西文单词或汉字
+              let searchText = fullText.slice(0, i2)
+              let wordMatch = searchText.match(/[a-zA-Z0-9]+$/)
+              let wrapCharPos = -1
+
+              if (wordMatch) {
+                wrapCharPos = wordMatch.index
               } else {
-                newChildren.pop()
-                startIdx--
+                wordMatch = searchText.match(/[\u4E00-\u9FFF]$/)
+                if (wordMatch) {
+                  wrapCharPos = wordMatch.index
+                }
               }
 
-              // 插入开始标签
-              const openToken = new state.Token('html_inline', '', 0)
-              openToken.content = '<span class="nowrap">'
-              newChildren.push(openToken)
+              if (wrapCharPos !== -1) {
+                // 找到需要包裹的起点，计算它在哪个token中
+                let currentPos = 0
+                for (let k of textTokenIndices) {
+                  const tokenLen = newChildren[k].content.length
+                  if (wrapCharPos >= currentPos && wrapCharPos < currentPos + tokenLen) {
+                    const charInToken = wrapCharPos - currentPos
+                    
+                    // 分割token
+                    const beforeContent = newChildren[k].content.slice(0, charInToken)
+                    const wrapContent = newChildren[k].content.slice(charInToken)
 
-              // 插入词
-              const wordToken = new state.Token('text', '', 0)
-              wordToken.content = word + spaces
-              newChildren.push(wordToken)
+                    if (beforeContent) {
+                      newChildren[k].content = beforeContent
+                    } else {
+                      newChildren.splice(k, 1)
+                      startIdx--
+                    }
 
-              hasWrapped = true
+                    // 重新收集从分割点到当前位置的所有文本
+                    let wrapText = wrapContent
+                    const nextK = beforeContent ? k + 1 : k
+                    for (let m = nextK; m < startIdx; m++) {
+                      if (newChildren[m].type === 'text') {
+                        wrapText += newChildren[m].content
+                      }
+                    }
+
+                    // 删除旧的文本token
+                    for (let m = nextK; m < startIdx; m++) {
+                      if (newChildren[m].type === 'text') {
+                        newChildren.splice(m, 1)
+                        startIdx--
+                        m--
+                      }
+                    }
+
+                    // 插入开始标签
+                    const openToken = new state.Token('html_inline', '', 0)
+                    openToken.content = '<span class="nowrap">'
+                    newChildren.push(openToken)
+
+                    // 插入要包裹的文本
+                    const wrapToken = new state.Token('text', '', 0)
+                    wrapToken.content = wrapText
+                    newChildren.push(wrapToken)
+
+                    hasWrapped = true
+                    break
+                  }
+                  currentPos += tokenLen
+                }
+              }
             }
           }
 
